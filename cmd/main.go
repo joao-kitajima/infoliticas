@@ -28,10 +28,18 @@ func main() {
 	}
 
 	// scanning user input
-	var input uint8
+	var input uint8 = 0
 
-	if _, err := fmt.Scanln(&input); err != nil {
-		log.Fatalln(err)
+	for input <= 0 || int(input) > len(Elections) {
+		if _, err := fmt.Scanln(&input); err != nil {
+			log.Fatalln(err)
+		}
+
+		if input <= 0 || int(input) > len(Elections) {
+			fmt.Println("Opção inválida!")
+		} else {
+			break
+		}
 	}
 
 	// building API endpoint
@@ -51,16 +59,56 @@ func main() {
 
 	fmt.Println(isFederal)
 
+	// OQ DESEJA EXTRAIR ESTARIA AQ
+	//
+	//
+	//
+	//
+
 	// zones
-	// Zones := [28]string{"BR", "AC", "AM", "AP", "PA", "RO", "RR", "TO", "AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE", "DF", "GO", "MS", "MT", "ES", "MG", "RJ", "SP", "PR", "RS", "SC"}
-	// fmt.Println(Zones)
+	Zones := [28]string{"BR", "AC", "AM", "AP", "PA", "RO", "RR", "TO", "AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE", "DF", "GO", "MS", "MT", "ES", "MG", "RJ", "SP", "PR", "RS", "SC"}
+	fmt.Println(Zones)
 
 	if isFederal {
 		// federal
 		fmt.Println()
+
+		// 1 - DESNECESSARIO
+		// GET em cada regiao
+		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/eleicao/listar/municipios/14417/BR/cargos" <- .../codELEICAO/REGIAO/cargos
+		// usar o de baixo direto
+		// if regiao == BR > codigos 1 e 2
+		// if regiao == DEMAIS > codigos 3 ao 10
+
+		// 2
+		// GET em cada CARGO de cada regiao
+		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/listar/2010/BR/14417/1/candidatos" <- .../listar/ANO/codREGIAO/codELEICAO/codCARGO/candidatos
+		// pegar ID candidato para o passo 3
+
+		// 3
+		// pagina do candidato
+		// /buscar/ANO/codREGIAO/codELEICAO/candidato/idCANDIDATO
+		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/buscar/2006/BR/14423/candidato/61"
+
 	} else {
-		fmt.Println()
 		// municipal
+		fmt.Println()
+
+		// 1
+		// ignorar regiao "BR"
+		// [GET] ""https://divulgacandcontas.tse.jus.br/divulga/rest/v1/eleicao/buscar/AC/2030402020/municipios
+		// retorna municipios daquele estado
+		// pegar codigos dos municipios para passo 2
+
+		// 2
+		// iterar sobre os codigos 11, 12 e 13 (prefeito, vp e vereador) para cada municipio
+		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/listar/2020/01120/2030402020/11/candidatos"
+		// coletar IDs dos candidatos para o passo 3
+
+		// 3
+		// pagina do candidato
+		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/buscar/2020/01120/2030402020/candidato/10000854328"
+
 	}
 
 }
