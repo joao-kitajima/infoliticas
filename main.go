@@ -6,7 +6,23 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
+
+// when new elections occur it must be added to the slice
+var Elections = [][]string{
+	{"Eleições Municipais 2004", "14431"},
+	{"Eleição Geral Federal 2006", "14423"},
+	{"Eleições Municipais 2008", "14422"},
+	{"Eleição Geral Federal 2010", "14417"},
+	{"Eleições Municipais 2012", "1699"},
+	{"Eleição Geral Federal 2014", "680"},
+	{"Eleições Municipais 2016", "2"},
+	{"Eleição Geral Federal 2018", "2022802018"},
+	{"Eleições Municipais 2020", "2030402020"},
+	{"Eleições Municipais 2020 - AP", "2032002020"},
+	{"Eleição Geral Federal 2022", "2040602022"},
+}
 
 type Candidaturas struct {
 	UnidadeEleitoral struct {
@@ -130,74 +146,30 @@ type Candidaturas struct {
 func main() {
 	fmt.Println("Saudações! Bem-vindo(a) ao Infolíticas!\nEste programa realiza a extração de informações das mídias sociais das candidaturas divulgadas pelo TSE (Tribunal Superior Eleitoral) sobre as eleições brasileiras.\n\nSobre qual eleição você deseja mais informações?\n(Digite o valor na linha de comando)")
 
-	// when new elections occur it must be added to the slice
-	Elections := [][]string{
-		{"Eleições Municipais 2004", "14431"},
-		{"Eleição Geral Federal 2006", "14423"},
-		{"Eleições Municipais 2008", "14422"},
-		{"Eleição Geral Federal 2010", "14417"},
-		{"Eleições Municipais 2012", "1699"},
-		{"Eleição Geral Federal 2014", "680"},
-		{"Eleições Municipais 2016", "2"},
-		{"Eleição Geral Federal 2018", "2022802018"},
-		{"Eleições Municipais 2020", "2030402020"},
-		{"Eleições Municipais 2020 - AP", "2032002020"},
-		{"Eleição Geral Federal 2022", "2040602022"},
-	}
-
-	for i, v := range Elections {
-		i++
-		fmt.Printf("%v. %v\n", i, v[0])
-	}
-
-	// scanning user input
-	var input uint8 = 0
-
-	for input <= 0 || int(input) > len(Elections) {
-		if _, err := fmt.Scanln(&input); err != nil {
-			log.Fatalln(err)
-		}
-
-		if input <= 0 || int(input) > len(Elections) {
-			fmt.Println("Opção inválida!")
-		} else {
-			break
-		}
-	}
+	input := listOptions(Elections)
 
 	// building API endpoint
 	var isFederal bool
 	var id, year string
 
+	idx := strings.LastIndex(Elections[input-1][0], " ")
+	year = Elections[input-1][0][idx+1:]
+	id = Elections[input-1][1]
+
 	switch input {
-	case 1:
-		fmt.Printf(`Você selecionou a opção "%v. %v".`+"\n", input, Elections[input-1][0])
+	case 1, 3, 5, 7, 9:
 		isFederal = false
-
-	case 2:
-		fmt.Printf(`Você selecionou a opção "%v. %v".`+"\n", input, Elections[input-1][0])
+	case 10:
+		isFederal, year = false, "2020"
+	case 2, 4, 6, 8, 11:
 		isFederal = true
-
-	case 11:
-		fmt.Printf(`Você selecionou a opção "%v. %v".`+"\n", input, Elections[input-1][0])
-		isFederal, id, year = true, Elections[input-1][1], "2022"
-
 	}
 
-	// fmt.Println(isFederal)
-	// fmt.Println(id, year)
+	// fmt.Println(isFederal, id, year)
+	// os.Exit(0)
 
-	// OQ DESEJA EXTRAIR ESTARIA AQ
-	//
-	//
-	//
-	//
-
-	// APITSE := "https://divulgacandcontas.tse.jus.br/divulga/rest/v1"
-
-	// zones
+	// requesting
 	Zones := [28]string{"BR", "AC", "AM", "AP", "PA", "RO", "RR", "TO", "AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE", "DF", "GO", "MS", "MT", "ES", "MG", "RJ", "SP", "PR", "RS", "SC"}
-	// fmt.Println(Zones)
 
 	if isFederal {
 		// federal
@@ -226,7 +198,7 @@ func main() {
 					APITSE := fmt.Sprintf("https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/listar/%v/%v/%v/%v/candidatos", year, zone, id, i)
 					log.Printf("[GET] %q\n", APITSE)
 
-					// GET
+					// get
 					resp, err := http.Get(APITSE)
 
 					if err != nil {
@@ -235,13 +207,13 @@ func main() {
 
 					defer resp.Body.Close()
 
+					// unmarshal
 					body, err := io.ReadAll(resp.Body)
 
 					if err != nil {
 						log.Fatalln(err)
 					}
 
-					// fmt.Println(string(body))
 					var cand Candidaturas
 
 					if err := json.Unmarshal(body, &cand); err != nil {
@@ -255,12 +227,14 @@ func main() {
 				}
 			} else {
 				fmt.Printf("ESTADO > %q\n", zone)
+
 			}
 		}
 
 	} else {
 		// municipal
-		fmt.Println()
+		fmt.Println(id)
+		fmt.Println(year)
 
 		// 1
 		// ignorar regiao "BR"
@@ -279,4 +253,30 @@ func main() {
 
 	}
 
+}
+
+// List options for user to choose and return the selected one.
+func listOptions(opt [][]string) (selected uint8) {
+	// list options
+	for i, v := range opt {
+		i++
+		fmt.Printf("%v. %v\n", i, v[0])
+	}
+
+	// scanning user input
+	for selected <= 0 || int(selected) > len(opt) {
+		if _, err := fmt.Scanln(&selected); err != nil {
+			log.Fatalln(err)
+		}
+
+		if selected <= 0 || int(selected) > len(opt) {
+			fmt.Println("Opção inválida!")
+		} else {
+			break
+		}
+	}
+
+	fmt.Printf(`Você selecionou a opção "%v. %v".`+"\n", selected, opt[selected-1][0])
+
+	return
 }
