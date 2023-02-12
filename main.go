@@ -24,6 +24,15 @@ var Elections = [][]string{
 	{"Eleição Geral Federal 2022", "2040602022"},
 }
 
+var Zones = [28]string{
+	"BR",                                     // Federal
+	"AC", "AM", "AP", "PA", "RO", "RR", "TO", // North
+	"AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE", // Northeast
+	"DF", "GO", "MS", "MT", // Central-west
+	"ES", "MG", "RJ", "SP", // Southeast
+	"PR", "RS", "SC", // South
+}
+
 type Candidaturas struct {
 	UnidadeEleitoral struct {
 		ID         interface{} `json:"id"`
@@ -147,30 +156,9 @@ func main() {
 	fmt.Println("Saudações! Bem-vindo(a) ao Infolíticas!\nEste programa realiza a extração de informações das mídias sociais das candidaturas divulgadas pelo TSE (Tribunal Superior Eleitoral) sobre as eleições brasileiras.\n\nSobre qual eleição você deseja mais informações?\n(Digite o valor na linha de comando)")
 
 	input := listOptions(Elections)
-
-	// building API endpoint
-	var isFederal bool
-	var id, year string
-
-	idx := strings.LastIndex(Elections[input-1][0], " ")
-	year = Elections[input-1][0][idx+1:]
-	id = Elections[input-1][1]
-
-	switch input {
-	case 1, 3, 5, 7, 9:
-		isFederal = false
-	case 10:
-		isFederal, year = false, "2020"
-	case 2, 4, 6, 8, 11:
-		isFederal = true
-	}
-
-	// fmt.Println(isFederal, id, year)
-	// os.Exit(0)
+	isFederal, id, year := buildEndpoint(input, Elections)
 
 	// requesting
-	Zones := [28]string{"BR", "AC", "AM", "AP", "PA", "RO", "RR", "TO", "AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE", "DF", "GO", "MS", "MT", "ES", "MG", "RJ", "SP", "PR", "RS", "SC"}
-
 	if isFederal {
 		// federal
 		fmt.Println()
@@ -277,6 +265,24 @@ func listOptions(opt [][]string) (selected uint8) {
 	}
 
 	fmt.Printf(`Você selecionou a opção "%v. %v".`+"\n", selected, opt[selected-1][0])
+
+	return
+}
+
+// Given the selected user option, build properly API endpoint.
+func buildEndpoint(in uint8, opt [][]string) (isFederal bool, id string, year string) {
+	idx := strings.LastIndex(opt[in-1][0], " ")
+	year = opt[in-1][0][idx+1:]
+	id = opt[in-1][1]
+
+	switch in {
+	case 1, 3, 5, 7, 9:
+		isFederal = false
+	case 10:
+		isFederal, year = false, "2020"
+	case 2, 4, 6, 8, 11:
+		isFederal = true
+	}
 
 	return
 }
