@@ -155,6 +155,140 @@ type Candidaturas struct {
 	} `json:"candidatos"`
 }
 
+type PerfilCandidato struct {
+	ID                               int         `json:"id"`
+	NomeUrna                         string      `json:"nomeUrna"`
+	Numero                           int         `json:"numero"`
+	IDCandidatoSuperior              int         `json:"idCandidatoSuperior"`
+	NomeCompleto                     string      `json:"nomeCompleto"`
+	DescricaoSexo                    string      `json:"descricaoSexo"`
+	DataDeNascimento                 string      `json:"dataDeNascimento"`
+	TituloEleitor                    string      `json:"tituloEleitor"`
+	Cpf                              string      `json:"cpf"`
+	DescricaoEstadoCivil             string      `json:"descricaoEstadoCivil"`
+	DescricaoCorRaca                 interface{} `json:"descricaoCorRaca"`
+	DescricaoSituacao                string      `json:"descricaoSituacao"`
+	Nacionalidade                    string      `json:"nacionalidade"`
+	GrauInstrucao                    string      `json:"grauInstrucao"`
+	Ocupacao                         string      `json:"ocupacao"`
+	GastoCampanha1T                  interface{} `json:"gastoCampanha1T"`
+	GastoCampanha2T                  interface{} `json:"gastoCampanha2T"`
+	SgUfNascimento                   string      `json:"sgUfNascimento"`
+	NomeMunicipioNascimento          string      `json:"nomeMunicipioNascimento"`
+	LocalCandidatura                 string      `json:"localCandidatura"`
+	UfCandidatura                    string      `json:"ufCandidatura"`
+	UfSuperiorCandidatura            interface{} `json:"ufSuperiorCandidatura"`
+	DataUltimaAtualizacao            string      `json:"dataUltimaAtualizacao"`
+	FotoURL                          string      `json:"fotoUrl"`
+	FotoDataUltimaAtualizacao        string      `json:"fotoDataUltimaAtualizacao"`
+	DescricaoTotalizacao             string      `json:"descricaoTotalizacao"`
+	NomeColigacao                    string      `json:"nomeColigacao"`
+	ComposicaoColigacao              string      `json:"composicaoColigacao"`
+	DescricaoTipoDrap                string      `json:"descricaoTipoDrap"`
+	NumeroProcessoDrap               interface{} `json:"numeroProcessoDrap"`
+	NumeroProcessoDrapEncrypt        interface{} `json:"numeroProcessoDrapEncrypt"`
+	NumeroProcesso                   string      `json:"numeroProcesso"`
+	NumeroProcessoEncrypt            string      `json:"numeroProcessoEncrypt"`
+	NumeroProcessoPrestContas        interface{} `json:"numeroProcessoPrestContas"`
+	NumeroProcessoPrestContasEncrypt interface{} `json:"numeroProcessoPrestContasEncrypt"`
+	NumeroProtocolo                  string      `json:"numeroProtocolo"`
+	Cargo                            struct {
+		Codigo      int         `json:"codigo"`
+		Sigla       interface{} `json:"sigla"`
+		Nome        string      `json:"nome"`
+		CodSuperior int         `json:"codSuperior"`
+		Titular     bool        `json:"titular"`
+		Contagem    int         `json:"contagem"`
+	} `json:"cargo"`
+	Bens []struct {
+		Ordem                 int     `json:"ordem"`
+		Descricao             string  `json:"descricao"`
+		DescricaoDeTipoDeBem  string  `json:"descricaoDeTipoDeBem"`
+		Valor                 float64 `json:"valor"`
+		DataUltimaAtualizacao string  `json:"dataUltimaAtualizacao"`
+	} `json:"bens"`
+	TotalDeBens float64 `json:"totalDeBens"`
+	Vices       []struct {
+		DtUltimaAtualizacao string      `json:"DT_ULTIMA_ATUALIZACAO"`
+		NomeColigacao       interface{} `json:"nomeColigacao"`
+		ComposicaoColigacao interface{} `json:"composicaoColigacao"`
+		StRegistro          interface{} `json:"stRegistro"`
+		SituacaoCandidato   interface{} `json:"situacaoCandidato"`
+		URLFoto             string      `json:"urlFoto"`
+		DtULTIMAATUALIZACAO int64       `json:"dt_ULTIMA_ATUALIZACAO"`
+		SqCANDIDATO         int         `json:"sq_CANDIDATO"`
+		SgUE                string      `json:"sg_UE"`
+		SqCANDIDATOSUPERIOR interface{} `json:"sq_CANDIDATO_SUPERIOR"`
+		NrCANDIDATO         string      `json:"nr_CANDIDATO"`
+		NmURNA              string      `json:"nm_URNA"`
+		NmCANDIDATO         string      `json:"nm_CANDIDATO"`
+		DsCARGO             string      `json:"ds_CARGO"`
+		NmPARTIDO           string      `json:"nm_PARTIDO"`
+		SgPARTIDO           string      `json:"sg_PARTIDO"`
+		SqELEICAO           int         `json:"sq_ELEICAO"`
+	} `json:"vices"`
+	Partido struct {
+		Numero int    `json:"numero"`
+		Sigla  string `json:"sigla"`
+		Nome   string `json:"nome"`
+	} `json:"partido"`
+	Eleicao struct {
+		ID                       int         `json:"id"`
+		SiglaUF                  interface{} `json:"siglaUF"`
+		LocalidadeSgUe           interface{} `json:"localidadeSgUe"`
+		Ano                      int         `json:"ano"`
+		Codigo                   interface{} `json:"codigo"`
+		NomeEleicao              interface{} `json:"nomeEleicao"`
+		TipoEleicao              interface{} `json:"tipoEleicao"`
+		Turno                    interface{} `json:"turno"`
+		TipoAbrangencia          interface{} `json:"tipoAbrangencia"`
+		DataEleicao              interface{} `json:"dataEleicao"`
+		CodSituacaoEleicao       interface{} `json:"codSituacaoEleicao"`
+		DescricaoSituacaoEleicao interface{} `json:"descricaoSituacaoEleicao"`
+		DescricaoEleicao         string      `json:"descricaoEleicao"`
+	} `json:"eleicao"`
+	Emails             []interface{} `json:"emails"`
+	Sites              []interface{} `json:"sites"`
+	Arquivos           []interface{} `json:"arquivos"`
+	EleicoesAnteriores []struct {
+		NrAno               int    `json:"nrAno"`
+		ID                  string `json:"id"`
+		NomeUrna            string `json:"nomeUrna"`
+		NomeCandidato       string `json:"nomeCandidato"`
+		IDEleicao           string `json:"idEleicao"`
+		SgUe                string `json:"sgUe"`
+		Local               string `json:"local"`
+		Cargo               string `json:"cargo"`
+		Partido             string `json:"partido"`
+		SituacaoTotalizacao string `json:"situacaoTotalizacao"`
+		TxLink              string `json:"txLink"`
+	} `json:"eleicoesAnteriores"`
+	Substituto                 interface{} `json:"substituto"`
+	Motivos                    interface{} `json:"motivos"`
+	CodigoSituacaoCandidato    int         `json:"codigoSituacaoCandidato"`
+	DescricaoSituacaoCandidato interface{} `json:"descricaoSituacaoCandidato"`
+	IsCandidatoInapto          bool        `json:"isCandidatoInapto"`
+	CodigoSituacaoPartido      string      `json:"codigoSituacaoPartido"`
+	DescricaoSituacaoPartido   string      `json:"descricaoSituacaoPartido"`
+	IsCandFechado              bool        `json:"isCandFechado"`
+	DescricaoNaturalidade      string      `json:"descricaoNaturalidade"`
+	StSUBSTITUIDO              bool        `json:"st_SUBSTITUIDO"`
+	StMOTIVOAUSENCIAREQUISITO  bool        `json:"st_MOTIVO_AUSENCIA_REQUISITO"`
+	StMOTIVOINDPARTIDO         bool        `json:"st_MOTIVO_IND_PARTIDO"`
+	StDIVULGA                  bool        `json:"st_DIVULGA"`
+	StDIVULGABENS              bool        `json:"st_DIVULGA_BENS"`
+	StREELEICAO                bool        `json:"st_REELEICAO"`
+	StDIVULGAARQUIVOS          bool        `json:"st_DIVULGA_ARQUIVOS"`
+	StMOTIVOFICHALIMPA         bool        `json:"st_MOTIVO_FICHA_LIMPA"`
+	StMOTIVOABUSOPODER         bool        `json:"st_MOTIVO_ABUSO_PODER"`
+	StMOTIVOCOMPRAVOTO         bool        `json:"st_MOTIVO_COMPRA_VOTO"`
+	StMOTIVOCONDUTAVEDADA      bool        `json:"st_MOTIVO_CONDUTA_VEDADA"`
+	StMOTIVOGASTOILICITO       bool        `json:"st_MOTIVO_GASTO_ILICITO"`
+	DsMOTIVOOUTROS             interface{} `json:"ds_MOTIVO_OUTROS"`
+	Cnpjcampanha               interface{} `json:"cnpjcampanha"`
+	GastoCampanha              float64     `json:"gastoCampanha"`
+}
+
 func main() {
 	fmt.Println("Saudações! Bem-vindo(a) ao Infolíticas!\nEste programa realiza a extração de informações das mídias sociais das candidaturas divulgadas pelo TSE (Tribunal Superior Eleitoral) sobre as eleições brasileiras.\n\nSobre qual eleição você deseja mais informações?\n(Digite o valor na linha de comando)")
 
@@ -190,8 +324,10 @@ func main() {
 					urlChan := sendURL(listCandidatosID(endpt), year, zone, id)
 
 					for url := range urlChan {
-						fmt.Println(url)
+						// fmt.Println(url)
 						// GET
+						cand := getCandidato(url)
+						fmt.Println(cand.Sites...)
 					}
 				}
 			} else {
@@ -274,7 +410,7 @@ func buildEndpoint(in uint8, opt [][]string) (isFederal bool, id string, year st
 	return
 }
 
-func listCandidatosID(url string) []int64 {
+func request(url string) []byte {
 	log.Printf("[GET] %q\n", url)
 
 	// get
@@ -292,6 +428,12 @@ func listCandidatosID(url string) []int64 {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	return body
+}
+
+func listCandidatosID(url string) []int64 {
+	body := request(url)
 
 	var cand Candidaturas
 	if err := json.Unmarshal(body, &cand); err != nil {
@@ -319,3 +461,16 @@ func sendURL(list []int64, year, zone, id string) <-chan string {
 
 	return urlChan
 }
+
+func getCandidato(url string) PerfilCandidato {
+	body := request(url)
+
+	var perf PerfilCandidato
+	if err := json.Unmarshal(body, &perf); err != nil {
+		log.Fatalln(err)
+	}
+
+	return perf
+}
+
+func persistData() {}
