@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -295,6 +296,17 @@ func main() {
 	input := listOptions(Elections)
 	isFederal, id, year := buildEndpoint(input, Elections)
 
+	log.Println("Iniciando extração de dados sobre as candidaturas ...")
+
+	// opening file
+	f, err := os.Create("output.jsonl")
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	defer f.Close()
+
 	if isFederal {
 		for _, zone := range Zones {
 			if zone == "BR" {
@@ -304,10 +316,24 @@ func main() {
 					urlChan := sendURL(listCandidatosID(endpt), year, zone, id)
 
 					for url := range urlChan {
-						fmt.Println(url)
-						// GET
-						// cand := getCandidato(url)
-						// fmt.Println(cand.Sites...)
+						respChan := get(url)
+						bodyChan := readResponse(<-respChan)
+
+						var prf PerfilCandidato
+						if err := json.Unmarshal(<-bodyChan, &prf); err != nil {
+							log.Fatalln(err)
+						}
+
+						// struct to string
+						str, err := json.Marshal(prf)
+
+						if err != nil {
+							log.Fatalln(err)
+						}
+
+						// go WRITE
+						// persist
+						f.WriteString(fmt.Sprintf("%v\n", string(str)))
 					}
 				}
 			} else {
@@ -315,6 +341,13 @@ func main() {
 				for i := 3; i <= 10; i++ {
 					if i == 8 {
 						continue
+					}
+
+					endpt := fmt.Sprintf("%v/candidatura/listar/%v/%v/%v/%v/candidatos", TSE, year, zone, id, i)
+					urlChan := sendURL(listCandidatosID(endpt), year, zone, id)
+
+					for url := range urlChan {
+						fmt.Println(url)
 					}
 
 					fmt.Println(zone)
@@ -460,15 +493,7 @@ func sendURL(list []int64, year, zone, id string) <-chan string {
 	return urlChan
 }
 
-// func getCandidato(url string) PerfilCandidato {
-// 	body := request(url)
+func write(p *PerfilCandidato) {
+	// io.Write
 
-// 	var perf PerfilCandidato
-// 	if err := json.Unmarshal(body, &perf); err != nil {
-// 		log.Fatalln(err)
-// 	}
-
-// 	return perf
-// }
-
-// func persistData() {}
+}
