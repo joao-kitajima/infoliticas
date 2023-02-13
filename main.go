@@ -161,9 +161,6 @@ func main() {
 	input := listOptions(Elections)
 	isFederal, id, year := buildEndpoint(input, Elections)
 
-	urlChan := make(chan string)
-	defer close(urlChan)
-
 	if isFederal {
 		// federal
 		// fmt.Println()
@@ -189,43 +186,21 @@ func main() {
 			if zone == "BR" {
 				// in federal level: "BR" uses codes "1" and "2"
 				for i := 1; i <= 2; i++ {
-					apiTSE := fmt.Sprintf("%v/candidatura/listar/%v/%v/%v/%v/candidatos", TSE, year, zone, id, i)
-					log.Printf("[GET] %q\n", apiTSE)
+					endpt := fmt.Sprintf("%v/candidatura/listar/%v/%v/%v/%v/candidatos", TSE, year, zone, id, i)
+					urlChan := sendURL(listCandidatosID(endpt), year, zone, id)
 
-					// get
-					resp, err := http.Get(apiTSE)
-
-					if err != nil {
-						log.Fatalln(err)
-					}
-
-					defer resp.Body.Close()
-
-					// unmarshal
-					body, err := io.ReadAll(resp.Body)
-
-					if err != nil {
-						log.Fatalln(err)
-					}
-
-					var cand Candidaturas
-
-					if err := json.Unmarshal(body, &cand); err != nil {
-						log.Fatalln(err)
-					}
-
-					for _, candidato := range cand.Candidatos {
-						go func(y, z, i string, c int64) {
-							urlChan <- fmt.Sprintf("%v/candidatura/buscar/%v/%v/%v/candidato/%v", TSE, y, z, i, c)
-						}(year, zone, id, candidato.ID)
+					for url := range urlChan {
+						fmt.Println(url)
+						// GET
 					}
 				}
 			} else {
-				fmt.Printf("ESTADO > %q\n", zone)
-
-				// in federal level: other zones uses codes between "3" and "10"
+				// in federal level: other zones uses codes between "3" and "10" (skipping "8")
 				for i := 3; i <= 10; i++ {
-					fmt.Println(i)
+					if i == 8 {
+						continue
+					}
+
 				}
 
 			}
@@ -250,17 +225,6 @@ func main() {
 		// pagina do candidato
 		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/buscar/2020/01120/2030402020/candidato/10000854328"
 
-	}
-
-EmptyingChannel:
-	for {
-		select {
-		case url := <-urlChan:
-			fmt.Println(url)
-			// go GET
-		default:
-			break EmptyingChannel
-		}
 	}
 
 }
@@ -297,6 +261,7 @@ func buildEndpoint(in uint8, opt [][]string) (isFederal bool, id string, year st
 	year = opt[in-1][0][idx+1:]
 	id = opt[in-1][1]
 
+	// new elections must be added here too
 	switch in {
 	case 1, 3, 5, 7, 9:
 		isFederal = false
@@ -307,4 +272,50 @@ func buildEndpoint(in uint8, opt [][]string) (isFederal bool, id string, year st
 	}
 
 	return
+}
+
+func listCandidatosID(url string) []int64 {
+	log.Printf("[GET] %q\n", url)
+
+	// get
+	resp, err := http.Get(url)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	defer resp.Body.Close()
+
+	// unmarshal
+	body, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var cand Candidaturas
+	if err := json.Unmarshal(body, &cand); err != nil {
+		log.Fatalln(err)
+	}
+
+	var s []int64
+	for _, c := range cand.Candidatos {
+		s = append(s, c.ID)
+	}
+
+	return s
+}
+
+func sendURL(list []int64, year, zone, id string) <-chan string {
+	urlChan := make(chan string)
+
+	go func(y, z, i string) {
+		defer close(urlChan)
+
+		for _, v := range list {
+			urlChan <- fmt.Sprintf("%v/candidatura/buscar/%v/%v/%v/candidato/%v", TSE, y, z, i, v)
+		}
+	}(year, zone, id)
+
+	return urlChan
 }
