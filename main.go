@@ -296,26 +296,6 @@ func main() {
 	isFederal, id, year := buildEndpoint(input, Elections)
 
 	if isFederal {
-		// federal
-		// fmt.Println()
-
-		// 1 - DESNECESSARIO
-		// GET em cada regiao
-		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/eleicao/listar/municipios/14417/BR/cargos" <- .../codELEICAO/REGIAO/cargos
-		// usar o de baixo direto
-		// if regiao == BR > codigos 1 e 2
-		// if regiao == DEMAIS > codigos 3 ao 10
-
-		// 2
-		// GET em cada CARGO de cada regiao
-		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/listar/2010/BR/14417/1/candidatos" <- .../listar/ANO/codREGIAO/codELEICAO/codCARGO/candidatos
-		// pegar ID candidato para o passo 3
-
-		// 3
-		// pagina do candidato
-		// /buscar/ANO/codREGIAO/codELEICAO/candidato/idCANDIDATO
-		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/buscar/2006/BR/14423/candidato/61"
-
 		for _, zone := range Zones {
 			if zone == "BR" {
 				// in federal level: "BR" uses codes "1" and "2"
@@ -324,10 +304,10 @@ func main() {
 					urlChan := sendURL(listCandidatosID(endpt), year, zone, id)
 
 					for url := range urlChan {
-						// fmt.Println(url)
+						fmt.Println(url)
 						// GET
-						cand := getCandidato(url)
-						fmt.Println(cand.Sites...)
+						// cand := getCandidato(url)
+						// fmt.Println(cand.Sites...)
 					}
 				}
 			} else {
@@ -337,6 +317,7 @@ func main() {
 						continue
 					}
 
+					fmt.Println(zone)
 				}
 
 			}
@@ -410,33 +391,50 @@ func buildEndpoint(in uint8, opt [][]string) (isFederal bool, id string, year st
 	return
 }
 
-func request(url string) []byte {
+// Request HTTP GET the URL and receive the channel for reading the response.
+func get(url string) <-chan *http.Response {
 	log.Printf("[GET] %q\n", url)
+	respChan := make(chan *http.Response)
 
-	// get
-	resp, err := http.Get(url)
+	go func(url string) {
+		defer close(respChan)
 
-	if err != nil {
-		log.Fatalln(err)
-	}
+		resp, err := http.Get(url)
+		respChan <- resp
 
-	defer resp.Body.Close()
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}(url)
 
-	// unmarshal
-	body, err := io.ReadAll(resp.Body)
+	return respChan
+}
 
-	if err != nil {
-		log.Fatalln(err)
-	}
+// Reads Response object and receive the channel containing its content.
+func readResponse(resp *http.Response) <-chan []byte {
+	bodyChan := make(chan []byte)
 
-	return body
+	go func(resp *http.Response) {
+		defer close(bodyChan)
+		body, err := io.ReadAll(resp.Body)
+
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		defer resp.Body.Close()
+		bodyChan <- body
+	}(resp)
+
+	return bodyChan
 }
 
 func listCandidatosID(url string) []int64 {
-	body := request(url)
+	respChan := get(url)
+	bodyChan := readResponse(<-respChan)
 
 	var cand Candidaturas
-	if err := json.Unmarshal(body, &cand); err != nil {
+	if err := json.Unmarshal(<-bodyChan, &cand); err != nil {
 		log.Fatalln(err)
 	}
 
@@ -462,15 +460,15 @@ func sendURL(list []int64, year, zone, id string) <-chan string {
 	return urlChan
 }
 
-func getCandidato(url string) PerfilCandidato {
-	body := request(url)
+// func getCandidato(url string) PerfilCandidato {
+// 	body := request(url)
 
-	var perf PerfilCandidato
-	if err := json.Unmarshal(body, &perf); err != nil {
-		log.Fatalln(err)
-	}
+// 	var perf PerfilCandidato
+// 	if err := json.Unmarshal(body, &perf); err != nil {
+// 		log.Fatalln(err)
+// 	}
 
-	return perf
-}
+// 	return perf
+// }
 
-func persistData() {}
+// func persistData() {}
