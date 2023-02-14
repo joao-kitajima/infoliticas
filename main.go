@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 )
 
 // when new elections occur it must be added to the slice
@@ -317,17 +321,31 @@ type Cidades struct {
 }
 
 func main() {
-	fmt.Println("Saudações! Bem-vindo(a) ao Infolíticas!\nEste programa realiza a extração de informações das mídias sociais das candidaturas divulgadas pelo TSE (Tribunal Superior Eleitoral) sobre as eleições brasileiras.\n\nSobre qual eleição você deseja mais informações?\n(Digite o valor na linha de comando)")
+	fmt.Println("Eleições cadastradas no Tribunal Superior Eleitoral (TSE)")
 
-	input := listOptions(Elections)
-	isFederal, id, year := buildEndpoint(input, Elections)
+	for i, v := range Elections {
+		i++
+		fmt.Printf("%v. %v\n", i, v[0])
+	}
 
+	input, err := strconv.Atoi(os.Getenv("ElectionID"))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	isFederal, id, year := buildEndpoint(uint8(input), Elections)
 	fmt.Println("Iniciando extração de dados sobre as candidaturas ...")
 
 	// file handler
 	var wg sync.WaitGroup
 
-	f, err := os.Create("infoliticas_output.jsonl")
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	cwd = fmt.Sprintf("%v/%v.jsonl", cwd, Elections[input-1][0])
+
+	f, err := os.Create(cwd)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -426,36 +444,21 @@ func main() {
 
 	wg.Wait()
 
-	log.Printf(
-		"O arquivo de saída foi gravado no mesmo diretório do programa.\nProcure por %q.\n",
-		"infoliticas_output.jsonl",
-	)
-}
-
-// List options for user to choose and return the selected one.
-func listOptions(opt [][]string) (selected uint8) {
-	// list options
-	for i, v := range opt {
-		i++
-		fmt.Printf("%v. %v\n", i, v[0])
+	// upload to Az stg
+	client, err := azblob.NewClientFromConnectionString(os.Getenv("AzureStgConnStr"), nil)
+	if err != nil {
+		log.Fatalln(err)
 	}
 
-	// scanning user input
-	for selected <= 0 || int(selected) > len(opt) {
-		if _, err := fmt.Scanln(&selected); err != nil {
-			log.Fatalln(err)
-		}
-
-		if selected <= 0 || int(selected) > len(opt) {
-			fmt.Println("Opção inválida!")
-		} else {
-			break
-		}
+	_, err = client.UploadFile(context.TODO(), "ingestion", f.Name(), f, nil)
+	if err != nil {
+		log.Fatalln(err)
 	}
 
-	fmt.Printf(`Você selecionou a opção "%v. %v".`+"\n", selected, opt[selected-1][0])
-
-	return
+	// delete file
+	if err := os.Remove(f.Name()); err != nil {
+		log.Fatalln(err)
+	}
 }
 
 // Given the selected user option, return properly API endpoint vars.
