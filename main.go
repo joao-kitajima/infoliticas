@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -365,7 +364,7 @@ func main() {
 
 						var prf PerfilCandidato
 						if err := json.Unmarshal(<-bodyChan, &prf); err != nil {
-							log.Fatalln(err)
+							log.Println(err)
 						}
 
 						// persist
@@ -393,7 +392,7 @@ func main() {
 
 						var prf PerfilCandidato
 						if err := json.Unmarshal(<-bodyChan, &prf); err != nil {
-							log.Fatalln(err)
+							log.Println(err)
 						}
 
 						// persist
@@ -425,7 +424,7 @@ func main() {
 
 						var prf PerfilCandidato
 						if err := json.Unmarshal(<-bodyChan, &prf); err != nil {
-							log.Fatalln(err)
+							log.Println(err)
 						}
 
 						// persist
@@ -492,7 +491,7 @@ func get(url string) <-chan *http.Response {
 		respChan <- resp
 
 		if err != nil {
-			log.Fatalln(err)
+			log.Println(err)
 		}
 	}(url)
 
@@ -505,13 +504,19 @@ func readResponse(resp *http.Response) <-chan []byte {
 
 	go func(resp *http.Response) {
 		defer close(bodyChan)
-		body, err := io.ReadAll(resp.Body)
+		// body, err := io.ReadAll(resp.Body)
 
-		if err != nil {
-			log.Fatalln(err)
-		}
+		// if err != nil {
+		// 	log.Println(err)
+		// }
 
 		defer resp.Body.Close()
+
+		var body []byte
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			log.Fatalf(">>>>>> %q\n", err)
+		}
+
 		bodyChan <- body
 	}(resp)
 
@@ -522,7 +527,7 @@ func stringify(prf PerfilCandidato) string {
 	str, err := json.Marshal(prf)
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 
 	return string(str)
@@ -534,7 +539,7 @@ func listCandidatosID(url string) []int64 {
 
 	var cand Candidaturas
 	if err := json.Unmarshal(<-bodyChan, &cand); err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 
 	var s []int64
@@ -551,7 +556,7 @@ func listCidadesID(url string) []string {
 
 	var cid Cidades
 	if err := json.Unmarshal(<-bodyChan, &cid); err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 
 	var s []string
