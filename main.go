@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 )
 
 // when new elections occur it must be added to the slice
@@ -290,21 +291,46 @@ type PerfilCandidato struct {
 	GastoCampanha              float64     `json:"gastoCampanha"`
 }
 
+type Cidades struct {
+	Estado struct {
+		ID         interface{} `json:"id"`
+		Sigla      string      `json:"sigla"`
+		Nome       string      `json:"nome"`
+		Regiao     interface{} `json:"regiao"`
+		Cargos     interface{} `json:"cargos"`
+		Diretorios interface{} `json:"diretorios"`
+		Codigo     string      `json:"codigo"`
+		Capital    bool        `json:"capital"`
+		Estado     string      `json:"estado"`
+	} `json:"estado"`
+	Municipios []struct {
+		ID         int         `json:"id"`
+		Sigla      interface{} `json:"sigla"`
+		Nome       string      `json:"nome"`
+		Regiao     interface{} `json:"regiao"`
+		Cargos     interface{} `json:"cargos"`
+		Diretorios interface{} `json:"diretorios"`
+		Codigo     string      `json:"codigo"`
+		Capital    bool        `json:"capital"`
+		Estado     interface{} `json:"estado"`
+	} `json:"municipios"`
+}
+
 func main() {
 	fmt.Println("Saudações! Bem-vindo(a) ao Infolíticas!\nEste programa realiza a extração de informações das mídias sociais das candidaturas divulgadas pelo TSE (Tribunal Superior Eleitoral) sobre as eleições brasileiras.\n\nSobre qual eleição você deseja mais informações?\n(Digite o valor na linha de comando)")
 
 	input := listOptions(Elections)
 	isFederal, id, year := buildEndpoint(input, Elections)
 
-	log.Println("Iniciando extração de dados sobre as candidaturas ...")
+	fmt.Println("Iniciando extração de dados sobre as candidaturas ...")
 
-	// opening file
-	f, err := os.Create("output.jsonl")
+	// file handler
+	var wg sync.WaitGroup
 
+	f, err := os.Create("output.jsonl") // custom name with cli input <<<
 	if err != nil {
 		log.Fatalln(err)
 	}
-
 	defer f.Close()
 
 	if isFederal {
@@ -324,17 +350,18 @@ func main() {
 							log.Fatalln(err)
 						}
 
-						// struct to string
-						str, err := json.Marshal(prf)
-
-						if err != nil {
-							log.Fatalln(err)
-						}
-
-						// go WRITE
 						// persist
-						f.WriteString(fmt.Sprintf("%v\n", string(str)))
+						wg.Add(1)
+						go func() {
+							defer wg.Done()
+
+							f.WriteString(fmt.Sprintf("%v\n", stringify(prf)))
+						}()
+
+						break // DELETE
 					}
+
+					break // DELETE
 				}
 			} else {
 				// in federal level: other zones uses codes between "3" and "10" (skipping "8")
@@ -347,35 +374,75 @@ func main() {
 					urlChan := sendURL(listCandidatosID(endpt), year, zone, id)
 
 					for url := range urlChan {
-						fmt.Println(url)
+						respChan := get(url)
+						bodyChan := readResponse(<-respChan)
+
+						var prf PerfilCandidato
+						if err := json.Unmarshal(<-bodyChan, &prf); err != nil {
+							log.Fatalln(err)
+						}
+
+						// persist
+						wg.Add(1)
+						go func() {
+							defer wg.Done()
+
+							f.WriteString(fmt.Sprintf("%v\n", stringify(prf)))
+						}()
+
+						break // DELETE
 					}
 
-					fmt.Println(zone)
+					// fmt.Println(zone)
+
+					break //DELETE
 				}
 
 			}
+
+			break // DELETE
 		}
 	} else {
-		// municipal
-		fmt.Println(id)
-		fmt.Println(year)
+		for _, zone := range Zones {
+			if zone == "BR" {
+				continue
+			}
 
-		// 1
-		// ignorar regiao "BR"
-		// [GET] ""https://divulgacandcontas.tse.jus.br/divulga/rest/v1/eleicao/buscar/AC/2030402020/municipios
-		// retorna municipios daquele estado
-		// pegar codigos dos municipios para passo 2
+			for _, cod := range listCidadesID(fmt.Sprintf("%v/eleicao/buscar/%v/%v/municipios", TSE, zone, id)) {
 
-		// 2
-		// iterar sobre os codigos 11, 12 e 13 (prefeito, vp e vereador) para cada municipio
-		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/listar/2020/01120/2030402020/11/candidatos"
-		// coletar IDs dos candidatos para o passo 3
+				for i := 11; i <= 13; i++ {
+					endpt := fmt.Sprintf("%v/candidatura/listar/%v/%v/%v/%v/candidatos", TSE, year, cod, id, i)
+					urlChan := sendURL(listCandidatosID(endpt), year, cod, id)
 
-		// 3
-		// pagina do candidato
-		// "https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/buscar/2020/01120/2030402020/candidato/10000854328"
+					for url := range urlChan {
+						respChan := get(url)
+						bodyChan := readResponse(<-respChan)
+
+						var prf PerfilCandidato
+						if err := json.Unmarshal(<-bodyChan, &prf); err != nil {
+							log.Fatalln(err)
+						}
+
+						// persist
+						wg.Add(1)
+						go func() {
+							defer wg.Done()
+
+							f.WriteString(fmt.Sprintf("%v\n", stringify(prf)))
+						}()
+					}
+
+				}
+
+				break // DELETE
+			}
+
+			break // DELETE
+		}
 
 	}
+
+	wg.Wait()
 
 }
 
@@ -462,6 +529,16 @@ func readResponse(resp *http.Response) <-chan []byte {
 	return bodyChan
 }
 
+func stringify(prf PerfilCandidato) string {
+	str, err := json.Marshal(prf)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	return string(str)
+}
+
 func listCandidatosID(url string) []int64 {
 	respChan := get(url)
 	bodyChan := readResponse(<-respChan)
@@ -479,6 +556,23 @@ func listCandidatosID(url string) []int64 {
 	return s
 }
 
+func listCidadesID(url string) []string {
+	respChan := get(url)
+	bodyChan := readResponse(<-respChan)
+
+	var cid Cidades
+	if err := json.Unmarshal(<-bodyChan, &cid); err != nil {
+		log.Fatalln(err)
+	}
+
+	var s []string
+	for _, c := range cid.Municipios {
+		s = append(s, c.Codigo)
+	}
+
+	return s
+}
+
 func sendURL(list []int64, year, zone, id string) <-chan string {
 	urlChan := make(chan string)
 
@@ -491,9 +585,4 @@ func sendURL(list []int64, year, zone, id string) <-chan string {
 	}(year, zone, id)
 
 	return urlChan
-}
-
-func write(p *PerfilCandidato) {
-	// io.Write
-
 }
