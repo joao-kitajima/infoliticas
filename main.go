@@ -327,7 +327,7 @@ func main() {
 	// file handler
 	var wg sync.WaitGroup
 
-	f, err := os.Create("output.jsonl") // custom name with cli input <<<
+	f, err := os.Create("infoliticas_output.jsonl")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -357,11 +357,7 @@ func main() {
 
 							f.WriteString(fmt.Sprintf("%v\n", stringify(prf)))
 						}()
-
-						break // DELETE
 					}
-
-					break // DELETE
 				}
 			} else {
 				// in federal level: other zones uses codes between "3" and "10" (skipping "8")
@@ -389,18 +385,9 @@ func main() {
 
 							f.WriteString(fmt.Sprintf("%v\n", stringify(prf)))
 						}()
-
-						break // DELETE
 					}
-
-					// fmt.Println(zone)
-
-					break //DELETE
 				}
-
 			}
-
-			break // DELETE
 		}
 	} else {
 		for _, zone := range Zones {
@@ -431,19 +418,18 @@ func main() {
 							f.WriteString(fmt.Sprintf("%v\n", stringify(prf)))
 						}()
 					}
-
 				}
 
-				break // DELETE
 			}
-
-			break // DELETE
 		}
-
 	}
 
 	wg.Wait()
 
+	log.Printf(
+		"O arquivo de saída foi gravado no mesmo diretório do programa.\nProcure por %q.\n",
+		"infoliticas_output.jsonl",
+	)
 }
 
 // List options for user to choose and return the selected one.
