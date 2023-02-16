@@ -16,3 +16,5 @@ Este programa requer as seguintes variáveis de ambiente para ser executado:
 9. Eleições Municipais 2020
 10. Eleições Municipais 2020 - AP
 11. Eleição Geral Federal 2022
+
+> Em outra branch existe um programa para separação dos resultados baseado no *blob* gravado no Azure Storage.
