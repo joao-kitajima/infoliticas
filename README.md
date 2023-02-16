@@ -1,14 +1,12 @@
-# infoliticas
+# Separação dos resultados de totalização das candidaturas
 
-Este programa realiza a extração de dados das candidaturas registradas no TSE (Tribunal Superior Eleitoral).
-Para executá-lo é necessário possuir ao menos a **versão 1.20** da linguagem de programação **Go**.
+Este programa requer as seguintes variáveis de ambiente para ser executado:
+* **AzureStgConnStr**: connection string do Azure Storage onde serão armazenados os dados de saída.
+* **blobURL**: URL do Azure Blob que concentra todos as candidaturas extraídas.
 
-Exemplo de execução abaixo (via linha de comando):
-1. Ir até a pasta do programa.
-2. Executar o comando: `go run main.go`
-
-Após execução, o arquivo de saída será gravado na mesma pasta como `infoliticas_output.jsonl`.
-
-
-> *Em outra branch é possível encontrar uma versão dockerizada do programa com integração com o Azure Storage.*
-
+As candidaturas são dividas em até 5 categorias:
+* **Eleito**
+* **Não eleito**
+* **Suplente**
+* **Concorrendo**
+* **Demais**: referente à demais opções. Serve para filtar candidaturas inválidas e totalizações como "2º turno".
