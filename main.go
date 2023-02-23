@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -14,38 +15,6 @@ import (
 )
 
 const containerName string = "ingestion"
-
-type resultCount struct {
-	name string
-	f    *os.File
-	blob *azblob.Client
-}
-
-func (r *resultCount) createTmpFile() {
-	name := fmt.Sprintf("%v.jsonl", r.name)
-
-	var err error
-	r.f, err = os.Create(name)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	log.Printf("Arquivo temporário local criado: %q.", name)
-}
-
-func (r *resultCount) removeTmpFile() { os.Remove(r.f.Name()) }
-
-func (r *resultCount) writeObj(obj string, wg *sync.WaitGroup) {
-	defer wg.Done()
-	r.f.WriteString(obj)
-}
-
-func (r *resultCount) createBlobClient() {
-	var err error
-	r.blob, err = azblob.NewClientFromConnectionString(os.Getenv("AzureStgConnStr"), nil)
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
 
 // JSON Struct
 type PerfilCandidato struct {
@@ -182,156 +151,158 @@ type PerfilCandidato struct {
 	GastoCampanha              float64     `json:"gastoCampanha"`
 }
 
+type MidiasCandidato struct {
+	ID       int      `json:"id"`
+	NomeUrna string   `json:"nomeUrna"`
+	Midias   []string `json:"midia"`
+}
+
 func main() {
-	// asserting var env src url input
-	srcBlob := os.Getenv("blobURL")
+	log.Println("Lendo variáveis de ambiente ...")
+	log.Printf("Endereço do arquivo de origem: %q.", os.Getenv("blobURL"))
 
-	if !strings.HasSuffix(srcBlob, ".jsonl") {
-		log.Fatalln("Endereço URL do Azure Blob não é um arquivo JSON Lines!")
+	if !strings.HasSuffix(os.Getenv("blobURL"), ".jsonl") {
+		log.Fatalln("Endereço não é um arquivo JSON Lines (.jsonl)!")
 	}
 
-	// creating tmp file
-	log.Println("Criando arquivo temporário em pasta local ...")
-	f, err := os.Create("tmp.jsonl")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	defer f.Close()
-	log.Println("Arquivo criado.")
+	log.Printf("Nome da mídia social a ser pesquisada: %q.", os.Getenv("midia"))
+	log.Printf("Padrão de busca nos endereços de mídias sociais: %q.", os.Getenv("pattern"))
 
-	log.Printf("Baixando arquivo da URL recebida: %q.\n", os.Getenv("blobURL"))
-	// downloading az blob to local tmp file
+	// downloading azblob
+	blob := createTmp("filtro_midias_sociais_*.jsonl")
+	defer closeRemoveTmp(blob)
+
 	client, err := azblob.NewClientWithNoCredential(os.Getenv("blobURL"), nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	blobClientOpts := azblob.DownloadFileOptions{
-		Progress: func(bytesTransferred int64) {
-			log.Printf("Recebendo %d bytes ...", bytesTransferred)
-		},
-	}
-
-	_, err = client.DownloadFile(context.TODO(), "", "", f, &blobClientOpts)
+	log.Println("Transferindo conteúdo para arquivo local ...")
+	_, err = client.DownloadFile(context.TODO(), "", "", blob, nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println("Transferência concluída com sucesso.")
+	log.Println("Transferência concluída.")
 
-	// removing base URL
-	idx := strings.LastIndex(srcBlob, "/")
-	srcBlob = srcBlob[idx+1:]
+	// creating tmp file
+	log.Println("Criando arquivo temporário para registro das candidaturas com contas associadas ...")
+	tmp := createTmp(fmt.Sprintf("%v.jsonl", os.Getenv("midia")))
+	defer closeRemoveTmp(tmp)
+	log.Println("Arquivo temporário criado com sucesso.")
 
-	// creating result counts catgs
-	// "Eleito"
-	var eleitos resultCount
-	eleitos.name = "eleitos"
-	eleitos.createTmpFile()
-	defer eleitos.removeTmpFile()
-	defer eleitos.f.Close()
-	eleitos.createBlobClient()
-
-	// "Não Eleito"
-	var naoEleitos resultCount
-	naoEleitos.name = "NAOeleitos"
-	naoEleitos.createTmpFile()
-	defer naoEleitos.removeTmpFile()
-	defer naoEleitos.f.Close()
-	naoEleitos.createBlobClient()
-
-	// "Suplente"
-	var suplentes resultCount
-	suplentes.name = "suplentes"
-	suplentes.createTmpFile()
-	defer suplentes.removeTmpFile()
-	defer suplentes.f.Close()
-	suplentes.createBlobClient()
-
-	// "Concorrendo"
-	var concorrendo resultCount
-	concorrendo.name = "concorrendo"
-	concorrendo.createTmpFile()
-	defer concorrendo.removeTmpFile()
-	defer concorrendo.f.Close()
-	concorrendo.createBlobClient()
-
-	// Demais Opções
-	var demais resultCount
-	demais.name = "demais"
-	demais.createTmpFile()
-	defer demais.removeTmpFile()
-	defer demais.f.Close()
-	demais.createBlobClient()
-
-	log.Println("Iniciando leitura sobre os registros encontrados ...")
-
+	// reading file
+	log.Println("Iterando sobre candidaturas ...")
+	reader := bufio.NewReader(blob)
+	var line []byte
 	var wg sync.WaitGroup
-	scanner := bufio.NewScanner(f)
-	count := 0
 
-	for scanner.Scan() {
-		count++
-		obj := scanner.Bytes()
+	for {
+		l, pfx, err := reader.ReadLine()
 
-		var prf PerfilCandidato
-		if err := json.Unmarshal(obj, &prf); err != nil {
+		// err and EOF check
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			log.Println(err)
 		}
 
-		if prf.ID == 0 {
-			continue
-		}
-
-		switch prf.DescricaoTotalizacao {
-		case "Eleito", "Eleito por QP", "Eleito por média":
-			wg.Add(1)
-			go eleitos.writeObj(string(obj)+"\n", &wg)
-
-		case "Não eleito":
-			wg.Add(1)
-			go naoEleitos.writeObj(string(obj)+"\n", &wg)
-
-		case "Suplente":
-			wg.Add(1)
-			go suplentes.writeObj(string(obj)+"\n", &wg)
-
-		case "Concorrendo":
-			wg.Add(1)
-			go concorrendo.writeObj(string(obj)+"\n", &wg)
-
-		default:
-			wg.Add(1)
-			go demais.writeObj(string(obj)+"\n", &wg)
-
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Fatalf("Erro de leitura! Problema encontrado na linha %d.\n", count)
-	} else {
-		log.Println("Fim do arquivo. Leitura encerrada.")
-	}
-
-	blobs := []resultCount{eleitos, naoEleitos, suplentes, concorrendo, demais}
-
-	for _, b := range blobs {
-		wg.Add(1)
-
-		go func(r resultCount) {
-			defer wg.Done()
-			blobName := fmt.Sprintf("tse/eleicoes/totalizacao/%v_%v", r.name, srcBlob)
-
-			_, err := r.blob.UploadFile(context.TODO(), containerName, blobName, r.f, nil)
-			if err != nil {
-				log.Fatalln(err)
+		if pfx {
+			line = append(line, l...)
+		} else {
+			if len(line) == 0 {
+				line = l
+			} else {
+				line = append(line, l...)
 			}
-			log.Printf("Transferindo arquivo %q para o Azure Storage.", blobName)
-		}(b)
-	}
 
-	// rm tmp file
-	os.Remove(f.Name())
+			var prf PerfilCandidato
+			if err := json.Unmarshal(line, &prf); err != nil {
+				log.Println(err)
+				continue
+			}
+
+			// collecting midias
+			var t MidiasCandidato
+			t.ID, t.NomeUrna = prf.ID, prf.NomeUrna
+
+			for _, site := range prf.Sites {
+				s := fmt.Sprint(site)
+
+				if strings.Contains(s, os.Getenv("pattern")) {
+					log.Printf("Mídia social encontrada! (%v)\n", s)
+					// removing query params
+					idx := strings.LastIndex(s, "?")
+					if idx != -1 {
+						log.Printf("Removendo parâmetros desnecessários da URL. (%v)\n", s[idx:])
+						s = s[:idx]
+					}
+
+					t.Midias = append(t.Midias, s)
+				}
+			}
+
+			if len(t.Midias) > 0 {
+				data, err := json.Marshal(&t)
+				if err != nil {
+					log.Println(err)
+				}
+
+				// write to file
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+
+					_, err = tmp.WriteString(string(data) + "\n")
+					if err != nil {
+						log.Println(err)
+					}
+				}()
+			}
+
+			line = []byte("")
+		}
+	}
 
 	wg.Wait()
-	log.Println("Transferência completa. Encerrando programa.")
+
+	// upload blob
+	log.Println("Criando conexão com Azure Storage ...")
+	idx := strings.LastIndex(os.Getenv("blobURL"), "/")
+	blobName := os.Getenv("blobURL")[idx+1:]
+	blobName = fmt.Sprintf("tse/eleicoes/midias_sociais/%v/%v", os.Getenv("midia"), blobName)
+	log.Printf("Caminho do Azure Blob configurado como: %q.\n", blobName)
+
+	client, err = azblob.NewClientFromConnectionString(os.Getenv("AzureStgConnStr"), nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Println("Transferindo arquivos para nuvem ...")
+	_, err = client.UploadFile(context.TODO(), containerName, blobName, tmp, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Println("Transferência realizada. Encerrando execução do programa.")
+}
+
+func createTmp(pattern string) *os.File {
+	f, err := os.CreateTemp("", pattern)
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	return f
+}
+
+func closeRemoveTmp(f *os.File) {
+	if err := f.Close(); err != nil {
+		log.Println(err)
+	}
+
+	if err := os.Remove(f.Name()); err != nil {
+		log.Println(err)
+	}
 }

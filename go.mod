@@ -1,4 +1,4 @@
-module separador
+module filtro
 
 go 1.20
 
