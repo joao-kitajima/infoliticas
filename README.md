@@ -1,10 +1,22 @@
 # Candidaturas TSE
 
+Programa desenvolvido para extrair os dados das candidaturas registradas no TSE (Tribunal Superior Eleitoral). A fonte de origem dos dados pode ser encontrada [aqui](https://divulgacandcontas.tse.jus.br/divulga/).
+
+## Exemplo de requisição de um candidato
+
+https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/buscar/2020/38490/2030402020/candidato/50000674223
+
+Endpoint segue o seguinte padrão: `<host>/divulga/rest/v1/candidatura/buscar/<anoEleicao>/<codRegiao>/<codEleicao>/candidato/<codCandidato>`
+
+## Variáveis de ambiente necessárias
+
 Este programa requer as seguintes variáveis de ambiente para ser executado:
-* **AzureStgConnStr**: connection string do Azure Storage onde serão armazenados os dados de saída.
-* **ElectionID**: número da eleição que se deseja realizar a extração das candituras.
+
+- **AzureStgConnStr**: connection string do Azure Storage onde serão armazenados os dados de saída.
+- **ElectionID**: número da eleição que se deseja realizar a extração das candituras.
 
 ### Tabela de Eleições
+
 1. Eleições Municipais 2004
 2. Eleição Geral Federal 2006
 3. Eleições Municipais 2008
@@ -17,4 +29,4 @@ Este programa requer as seguintes variáveis de ambiente para ser executado:
 10. Eleições Municipais 2020 - AP
 11. Eleição Geral Federal 2022
 
-> Em outra branch existe um programa para separação dos resultados baseado no *blob* gravado no Azure Storage.
+> Em outra branch existe um programa para separação dos resultados baseado no _blob_ gravado no Azure Storage.
