@@ -8,4 +8,4 @@ WORKDIR /usr/src/infoliticas
 
 COPY . .
 
-CMD [ "go run main.go" ]
+CMD [ "go run *.go" ]
