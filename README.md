@@ -12,8 +12,9 @@ Endpoint segue o seguinte padrão: `<host>/divulga/rest/v1/candidatura/buscar/<a
 
 Este programa requer as seguintes variáveis de ambiente para ser executado:
 
-- **AzureStgConnStr**: connection string do Azure Storage onde serão armazenados os dados de saída.
-- **ElectionID**: número da eleição que se deseja realizar a extração das candituras.
+- **AZURE_STG_CONN_STR**: connection string do Azure Storage onde serão armazenados os dados de saída.
+- **AZURE_STG_WD**: caminho de pastas dentro do Azure Storage (exemplo: container/grandparent/parent/myblob.jsonl).
+- **ELECTION_NUM**: número da eleição que se deseja realizar a extração das candituras.
 
 ### Tabela de Eleições
 
@@ -28,5 +29,3 @@ Este programa requer as seguintes variáveis de ambiente para ser executado:
 9. Eleições Municipais 2020
 10. Eleições Municipais 2020 - AP
 11. Eleição Geral Federal 2022
-
-> Em outra branch existe um programa para separação dos resultados baseado no _blob_ gravado no Azure Storage.
