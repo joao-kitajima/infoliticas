@@ -1,14 +1,32 @@
-# infoliticas
+# Candidaturas TSE
 
-Este programa realiza a extração de dados das candidaturas registradas no TSE (Tribunal Superior Eleitoral).
-Para executá-lo é necessário possuir ao menos a **versão 1.20** da linguagem de programação **Go**.
+Programa desenvolvido para extrair os dados das candidaturas registradas no TSE (Tribunal Superior Eleitoral). A fonte de origem dos dados pode ser encontrada [aqui](https://divulgacandcontas.tse.jus.br/divulga/).
 
-Exemplo de execução abaixo (via linha de comando):
-1. Ir até a pasta do programa.
-2. Executar o comando: `go run main.go`
+## Exemplo de requisição de um candidato
 
-Após execução, o arquivo de saída será gravado na mesma pasta como `infoliticas_output.jsonl`.
+https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/buscar/2020/38490/2030402020/candidato/50000674223
 
+Endpoint segue o seguinte padrão: `<host>/divulga/rest/v1/candidatura/buscar/<anoEleicao>/<codRegiao>/<codEleicao>/candidato/<codCandidato>`
 
-> *Em outra branch é possível encontrar uma versão dockerizada do programa com integração com o Azure Storage.*
+## Variáveis de ambiente necessárias
 
+Este programa requer as seguintes variáveis de ambiente para ser executado:
+
+- **AzureStgConnStr**: connection string do Azure Storage onde serão armazenados os dados de saída.
+- **ElectionID**: número da eleição que se deseja realizar a extração das candituras.
+
+### Tabela de Eleições
+
+1. Eleições Municipais 2004
+2. Eleição Geral Federal 2006
+3. Eleições Municipais 2008
+4. Eleição Geral Federal 2010
+5. Eleições Municipais 2012
+6. Eleição Geral Federal 2014
+7. Eleições Municipais 2016
+8. Eleição Geral Federal 2018
+9. Eleições Municipais 2020
+10. Eleições Municipais 2020 - AP
+11. Eleição Geral Federal 2022
+
+> Em outra branch existe um programa para separação dos resultados baseado no _blob_ gravado no Azure Storage.
