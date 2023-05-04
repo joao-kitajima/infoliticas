@@ -1,22 +1,22 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	_ "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 )
 
 func main() {
+	os.Setenv("ELECTION_NUM", "11")
+
 	log.Println("start program")
 
 	// validation of env var "ELECTION_NUM"
@@ -33,11 +33,11 @@ func main() {
 
 	// create tmp file
 	log.Println("create tmp file")
-	f, err := os.CreateTemp("", "profiles.jsonl")
+	f, err := os.Create("profiles.jsonl")
 	if err != nil {
 		log.Fatalln(err)
 	}
-	defer os.Remove(f.Name())
+	// defer os.Remove(f.Name())
 
 	candidatesListChan := make(chan string, 64)
 	profilesChan := make(chan string, 64)
@@ -60,6 +60,7 @@ func main() {
 						}
 
 						candidatesListChan <- fmt.Sprintf("%v/candidatura/listar/%v/%v/%v/%d/candidatos", TSE, year, zone, id, i)
+						break //@delete
 					}
 
 					continue
@@ -69,6 +70,7 @@ func main() {
 				for i := 1; i <= 2; i++ {
 					candidatesListChan <- fmt.Sprintf("%v/candidatura/listar/%v/%v/%v/%d/candidatos", TSE, year, zone, id, i)
 				}
+
 			}
 
 			close(candidatesListChan)
@@ -95,19 +97,19 @@ func main() {
 
 	<-doneChan // block until done
 
-	wd := os.Getenv("AZURE_STG_WD")
-	container, path := resolveAzureVars(&wd)
-	blobName := filepath.Join(path, fmt.Sprintf("election_%v.jsonl", id))
+	// wd := os.Getenv("AZURE_STG_WD")
+	// container, path := resolveAzureVars(&wd)
+	// blobName := filepath.Join(path, fmt.Sprintf("election_%v.jsonl", id))
 
-	blob, err := azblob.NewClientFromConnectionString(os.Getenv("AZURE_STG_CONN_STR"), nil)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	// blob, err := azblob.NewClientFromConnectionString(os.Getenv("AZURE_STG_CONN_STR"), nil)
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
 
-	_, err = blob.UploadFile(context.TODO(), container, blobName, f, nil)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	// _, err = blob.UploadFile(context.TODO(), container, blobName, f, nil)
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
 
 	log.Println("end program")
 }
@@ -235,12 +237,12 @@ func validateElectionNum(num *int) error {
 	return nil
 }
 
-func resolveAzureVars(wd *string) (container, path string) {
-	idx := strings.Index(*wd, "/")
-	container = (*wd)[:idx]
-	path = (*wd)[idx+1:]
-	return
-}
+// func resolveAzureVars(wd *string) (container, path string) {
+// 	idx := strings.Index(*wd, "/")
+// 	container = (*wd)[:idx]
+// 	path = (*wd)[idx+1:]
+// 	return
+// }
 
 func classifyElection(num *int) (id, year string, isFederal bool) {
 	id = Elections[*num-1][1]
